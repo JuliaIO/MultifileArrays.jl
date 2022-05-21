@@ -1,10 +1,13 @@
-name = "LazyMultifileArrays"
+name = "MultifileArrays"
 uuid = "18a1d154-b244-4181-98dd-8f3786468fa3"
 authors = ["Tim Holy <tim.holy@gmail.com> and contributors"]
 version = "0.1.0"
 
+[deps]
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
 [compat]
-julia = "1"
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

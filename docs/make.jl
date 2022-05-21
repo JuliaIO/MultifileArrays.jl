@@ -1,16 +1,16 @@
-using LazyMultifileArrays
+using MultifileArrays
 using Documenter
 
-DocMeta.setdocmeta!(LazyMultifileArrays, :DocTestSetup, :(using LazyMultifileArrays); recursive=true)
+DocMeta.setdocmeta!(MultifileArrays, :DocTestSetup, :(using MultifileArrays); recursive=true)
 
 makedocs(;
-    modules=[LazyMultifileArrays],
+    modules=[MultifileArrays],
     authors="Tim Holy <tim.holy@gmail.com> and contributors",
-    repo="https://github.com/JuliaIO/LazyMultifileArrays.jl/blob/{commit}{path}#{line}",
-    sitename="LazyMultifileArrays.jl",
+    repo="https://github.com/JuliaIO/MultifileArrays.jl/blob/{commit}{path}#{line}",
+    sitename="MultifileArrays.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://JuliaIO.github.io/LazyMultifileArrays.jl",
+        canonical="https://JuliaIO.github.io/MultifileArrays.jl",
         assets=String[],
     ),
     pages=[
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/JuliaIO/LazyMultifileArrays.jl",
+    repo="github.com/JuliaIO/MultifileArrays.jl",
     devbranch="main",
 )

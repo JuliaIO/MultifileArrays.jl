@@ -1,14 +1,14 @@
 ```@meta
-CurrentModule = LazyMultifileArrays
+CurrentModule = MultifileArrays
 ```
 
-# LazyMultifileArrays
+# MultifileArrays
 
-Documentation for [LazyMultifileArrays](https://github.com/JuliaIO/LazyMultifileArrays.jl).
+Documentation for [MultifileArrays](https://github.com/JuliaIO/MultifileArrays.jl).
 
 ```@index
 ```
 
 ```@autodocs
-Modules = [LazyMultifileArrays]
+Modules = [MultifileArrays]
 ```
