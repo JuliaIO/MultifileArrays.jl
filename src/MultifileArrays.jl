@@ -1,8 +1,16 @@
+"""
+MultifileArrays creates lazily-loaded multidimensional arrays from files. Here are the main functions:
+
+- `load_chunked`: Load an array from chunks stored in files in `filenames`.
+- `load_series`: Create a lazily-loaded array `A` from a set of files.
+- `select_series`: Create a vector of filenames from `filepattern`.
+"""
 module MultifileArrays
 
 using SparseArrays   # only for ambiguity resolution
+using Requires
 
-export select_series, load_series
+export select_series, load_series, load_chunked
 
 struct MultifileArray{T,N,A<:AbstractArray,NF,F} <: AbstractArray{T,N}
     filenames::Array{String,NF}
@@ -83,7 +91,7 @@ function select_series(filepattern::Regex; dir=pwd())
         m = match(filepattern, filename)
         m === nothing && continue
         push!(filenames, joinpath(dir, filename))
-        push!(order, (parse.(Int, m.captures)...,))
+        push!(order, (parse.(Int, m.captures)...,)...)
     end
     isempty(filenames) && throw(ArgumentError("no files in $dir matched $filepattern"))
     p = sortperm(order)
@@ -94,10 +102,32 @@ end
     filenames = select_series(filepattern; dir=pwd())
 
 Create a vector of filenames from `filepattern`. `filepattern` may be a string containing a `*` character
-(which is treated as a wildcard match), or a regular expression capturing a digit-substring.
-In either case, the `*`/`capture` extracts an integer that determines file order.
+or a regular expression capturing a digit-substring. The `*`/`capture` extracts an integer that determines file order.
+
+When `dir` contains no extraneous files, and the filenames are ordered alphabetically in the desired sequence,
+then `readdir` is a simpler alternative. `select_series` may be useful for cases that don't satisfy both of these conditions.
+
+# Examples
+
+Suppose you have a directory with `myimage_1.png`, `myimage_2.png`, ..., `myimage_12.png`. Then
+
+```julia
+julia> select_series("myimage_*.png")
+12-element Vector{String}:
+ "myimage_1.png"
+ "myimage_2.png"
+ ⋮
+ "myimage_12.png"
+```
+
+!!! note
+    The `myimage_` part of the string is essential: the `*` must match only integer data.
 """
 function select_series(filepattern::AbstractString; kwargs...)
+    if isabspath(filepattern) && isempty(kwargs)
+        path, filepattern = dirname(filepattern), basename(filepattern)
+        kwargs = (dir=path,)
+    end
     rex = Regex(join(split(filepattern, '*'), "(\\d+)"))
     return select_series(rex; kwargs...)
 end
@@ -108,6 +138,7 @@ end
 Create a lazily-loaded array `A` from a set of files. `f(filename)` should create an array from the `filename`,
 and `filepattern` is a pattern matching the names of the desired files. The file names should have a numeric
 portion that indicates ordering; ordering is numeric rather than alphabetical, so left-padding with zeros is optional.
+See [`select_series`](@ref) for details about the pattern-matching.
 
 # Examples
 
@@ -185,6 +216,46 @@ if needed.
 """
 @noinline function load_series(f::F, filenames::AbstractArray{<:AbstractString}, buffer::AbstractArray) where F
     return MultifileArray(filenames, buffer, f)
+end
+
+"""
+    A = load_chunked(lazyloader, filenames)
+
+Load an array from chunks stored in files in `filenames`. `filenames` must be shaped so that it is "extended"
+along the dimension of concatenation.
+
+When each chunk has the same size and is equivalent to a single slice of the final array, [`load_series`](@ref)
+may yield better performance.
+
+# Examples
+
+Suppose you have 2 files, `myimage_1.tiff` and `myimage_2.tiff`, with the first storing 1000 two-dimensional
+images and the second storing 555 images of the same shape. Then you can load a contiguous 3d array with
+
+```julia
+julia> julia> filenames = reshape(["myimage_1.tiff", "myimage_2.tiff"], (1, 1, 2))
+1×1×2 Array{String, 3}:
+[:, :, 1] =
+ "myimage_1.tiff"
+
+[:, :, 2] =
+ "myimage_2.tiff"
+
+julia> img = load_chunked(fn -> load(fn; mmap=true), filenames);
+
+julia> size(img)
+(512, 512, 1555)
+```
+
+In the [TiffImages](https://github.com/tlnagy/TiffImages.jl) package, `mmap=true` allows you to "virtually" load the data by memory-mapping, supporting arrays much larger than computer memory.
+
+!!! note
+    `load_chunked` requires that you manually load the [BlockArrays](https://github.com/JuliaArrays/BlockArrays.jl) package.
+"""
+function load_chunked end
+
+function __init__()
+    @require BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e" include("mortar.jl")
 end
 
 end
