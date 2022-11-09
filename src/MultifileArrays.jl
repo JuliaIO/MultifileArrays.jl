@@ -78,9 +78,13 @@ Base.copyto!(dest::PermutedDimsArray, src::SubArray{T,N,<:MultifileArray}) where
     _copyto!(dest, src)
 Base.copyto!(dest::PermutedDimsArray{T,N}, src::SubArray{T,N,<:MultifileArray}) where {T,N} =
     _copyto!(dest, src)
-Base.copyto!(dest::SparseVector, src::SubArray{T,1,<:MultifileArray}) where {T,N} =
-    _copyto!(dest, src)
-
+if isdefined(SparseArrays, :AbstractCompressedVector)
+    Base.copyto!(dest::SparseArrays.AbstractCompressedVector, src::SubArray{T,1,<:MultifileArray}) where {T} =
+        invoke(copyto!, (SparseArrays.AbstractCompressedVector, AbstractVector), dest, src)
+else
+    Base.copyto!(dest::SparseVector, src::SubArray{T,1,<:MultifileArray}) where {T,N} =
+        _copyto!(dest, src)
+end
 
 ## User-level API
 
