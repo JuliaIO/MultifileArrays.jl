@@ -19,7 +19,7 @@ julia> img = load_series(load, "myimage_*.png"; dir)
 While MultifileArrays is convenient, there are some performance caveats to keep in mind:
 
 - to reduce the number of times that a file needs to be (re)loaded from disk, iteration over the resulting array is best done in a manner consistent with the file-by-file slicing.
-- operations than can be performed "slice at a time" (e.g., visualization with ImageView) are even more optimized, as they bypass the need to check whether the supplied slice-index corresponds to the currently loaded file when accessing individual elements of the array.
+- operations than can be performed "slice at a time" (e.g., visualization with ImageView) are even more optimized than scalar (single-element) indexing, as the latter must check whether the supplied slice-index corresponds to the currently loaded file upon each access.
 
 For uncompressed data, alternative approaches that exploit [memory-mapping](https://en.wikipedia.org/wiki/Memory-mapped_file) may yield better performance. The [StackViews](https://github.com/JuliaArrays/StackViews.jl) package allows you to "glue" such arrays together.
 
