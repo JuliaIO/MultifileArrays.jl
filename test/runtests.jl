@@ -7,7 +7,9 @@ using Test
 
 @testset "MultifileArrays.jl" begin
     @testset "ambiguities" begin
-        @test isempty(detect_ambiguities(MultifileArrays))
+        if Base.VERSION >= v"1.7.0"
+            @test isempty(detect_ambiguities(MultifileArrays))
+        end
     end
 
     mktempdir() do path

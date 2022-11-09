@@ -126,6 +126,7 @@ julia> select_series("myimage_*.png")
 
 !!! note
     The `myimage_` part of the string is essential: the `*` must match only integer data.
+    The "generic wildcard" meaning of `*` is implemented in [Glob](https://github.com/vtjnash/Glob.jl).
 """
 function select_series(filepattern::AbstractString; kwargs...)
     if isabspath(filepattern) && isempty(kwargs)
@@ -185,6 +186,10 @@ that follow the dimensions of `buffer`.
 
 The advantage of this syntax is that it provides greater control than [`load_series(f, filepattern)`](@ref) over the
 choice of files and the shape of the overall output.
+
+!!! note
+    [StackViews](https://github.com/JuliaArrays/StackViews.jl) provides an alternative approach that may yield better
+    performance if you can either load all the files into memory at once or use lazy `mmap`-based loading.
 
 # Examples
 
