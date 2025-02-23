@@ -42,6 +42,11 @@ using Test
         for z = 1:4, t = 1:5
             @test all(==(encode(z, t)), img[:,:,z,t])
         end
+        img2 = load_series(load, joinpath(path,"myimage_z=*_t=*.tiff"))
+        @test size(img2) == (5, 7, 4, 5)
+        for z = 1:4, t = 1:5
+            @test all(==(encode(z, t)), img2[:,:,z,t])
+        end
     end
 
     mktempdir() do path
@@ -54,5 +59,6 @@ using Test
         @test size(img) == (8, 7, 14)
         @test img[:,:,1:10] == img1
         @test img[:,:,11:end] == img2
+        # there is an issue with the directory cleanup here, since the files are still open
     end
 end
