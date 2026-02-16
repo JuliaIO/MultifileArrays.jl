@@ -7,10 +7,15 @@ using Test
 
 @testset "MultifileArrays.jl" begin
     @testset "ambiguities" begin
-        if Base.VERSION >= v"1.7.0"
-            @test isempty(detect_ambiguities(MultifileArrays))
-        end
+        @test isempty(detect_ambiguities(MultifileArrays))
     end
+
+    buffer = zeros(5, 7)
+    A = MultifileArrays.MultifileArray{eltype(buffer),3,typeof(buffer),1,typeof(load)}(["image_1.png"], buffer, load)
+    @test isa(A, AbstractArray{eltype(buffer),3})
+    @test size(A) == (5, 7, 1)
+    @test_throws TypeError MultifileArrays.MultifileArray{Bool,3,typeof(buffer),1,typeof(load)}(["image_1.png"], buffer, load)
+    @test_throws ArgumentError MultifileArrays.MultifileArray{eltype(buffer),2,typeof(buffer),1,typeof(load)}(["image_1.png"], buffer, load)
 
     mktempdir() do path
         for i = 1:12
