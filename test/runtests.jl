@@ -54,5 +54,8 @@ using Test
         @test size(img) == (8, 7, 14)
         @test img[:,:,1:10] == img1
         @test img[:,:,11:end] == img2
+        # Try to clean up (doesn't work on Windows)
+        img = nothing
+        GC.gc(); GC.gc(); GC.gc()
     end
 end
