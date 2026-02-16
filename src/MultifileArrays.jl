@@ -8,7 +8,6 @@ MultifileArrays creates lazily-loaded multidimensional arrays from files. Here a
 module MultifileArrays
 
 using SparseArrays   # only for ambiguity resolution
-using Requires
 
 export select_series, load_series, load_chunked
 
@@ -262,9 +261,5 @@ In the [TiffImages](https://github.com/tlnagy/TiffImages.jl) package, `mmap=true
     `load_chunked` requires that you manually load the [BlockArrays](https://github.com/JuliaArrays/BlockArrays.jl) package.
 """
 function load_chunked end
-
-function __init__()
-    @require BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e" include("mortar.jl")
-end
 
 end
