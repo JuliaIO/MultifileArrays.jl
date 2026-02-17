@@ -86,20 +86,54 @@ else
         _copyto!(dest, src)
 end
 
+"""
+    get_order_ranges(order; strides=nothing)
+
+receives a Vector of NTuples and calculates the number of unique entries in each dimension.
+
+# Arguments
+- `order`: A Vector of NTuples.
+- `strides`: The strides of the dimensions in the filenames. Default is `nothing` which means that the strides are ignored.
+
+# Returns
+the ranges of the dimensions in the filenames.
+"""
+function get_order_size(order)
+    get_tuple_idx(order, i) = getindex.(order, i)
+    return Tuple(length(unique(get_tuple_idx(order, i))) for i in eachindex(first(order)))
+end
+
 ## User-level API
 
 function select_series(filepattern::Regex; dir=pwd())
+    rd = readdir(dir)
     filenames = String[]
-    order = Int[]
-    for filename in readdir(dir)
+    matches = 0
+    # assure that there is at least one matching filename and count the matched captures of this regex, which cannot change by definition
+    idx = findfirst(s -> occursin(filepattern, s), rd)
+    isnothing(idx) && throw(ArgumentError("no files in $dir matched $filepattern"))
+
+    matches = length(match(filepattern, rd[idx]).captures)
+    order = NTuple{matches, Int}[]
+    for filename in rd
         m = match(filepattern, filename)
         m === nothing && continue
         push!(filenames, joinpath(dir, filename))
-        push!(order, (parse.(Int, m.captures)...,)...)
+        # the reverse below is to ensure that the ordering corresponds to the final array order
+        push!(order, reverse((parse.(Int, m.captures)...,)))
     end
-    isempty(filenames) && throw(ArgumentError("no files in $dir matched $filepattern"))
+
+    # sorting works with tuples as well
     p = sortperm(order)
-    return filenames[p]
+    filenames = filenames[p]
+    order_size = get_order_size(order)
+    if (prod(order_size) == length(filenames))
+        # the reverse below is needed to get the sorting order to match the final array order
+        return reshape(filenames, reverse(order_size))
+    else
+        @warn "filenames are not in a grid-like arrangement; returning a vector instead"
+        return filenames
+    end
 end
 
 """
@@ -134,15 +168,16 @@ function select_series(filepattern::AbstractString; kwargs...)
         kwargs = (dir=path,)
     end
     rex = Regex(join(split(filepattern, '*'), "(\\d+)"))
-    return select_series(rex; kwargs...)
+    filenames = select_series(rex; kwargs...)
+    return filenames
 end
 
 """
     A = load_series(f, filepattern; dir=pwd())
 
 Create a lazily-loaded array `A` from a set of files. `f(filename)` should create an array from the `filename`,
-and `filepattern` is a pattern matching the names of the desired files. The file names should have a numeric
-portion that indicates ordering; ordering is numeric rather than alphabetical, so left-padding with zeros is optional.
+and `filepattern` is a pattern matching the names of the desired files. The file names should have one or multiple numeric
+portions that indicates ordering; ordering is numeric rather than alphabetical, so left-padding with zeros is optional.
 See [`select_series`](@ref) for details about the pattern-matching.
 
 # Examples
@@ -162,6 +197,14 @@ julia> img = load_series(load, r"image(\\d+).tiff");
 ```
 
 suffice to load the image files.
+If multiple wildcard characters are present, the order of the digits in the filenames is used to determine the order of the files.
+```julia
+julia> using FileIO, MultifileArrays
+
+julia> img = load_series(load, "image_z=*_t=*.tiff")
+```
+but the files need to be ordered in a grid-like fashion, otherwise the matching files will only be collected along one dimension.
+
 """
 function load_series(f, filepattern; kwargs...)
     filenames = select_series(filepattern; kwargs...)

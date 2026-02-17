@@ -47,6 +47,11 @@ using Test
         for z = 1:4, t = 1:5
             @test all(==(encode(z, t)), img[:,:,z,t])
         end
+        img2 = load_series(load, joinpath(path,"myimage_z=*_t=*.tiff"))
+        @test size(img2) == (5, 7, 4, 5)
+        for z = 1:4, t = 1:5
+            @test all(==(encode(z, t)), img2[:,:,z,t])
+        end
     end
 
     mktempdir() do path
