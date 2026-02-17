@@ -109,12 +109,11 @@ function select_series(filepattern::Regex; dir=pwd())
     rd = readdir(dir)
     filenames = String[]
     matches = 0
-    for filename in rd
-        m = match(filepattern, filename)
-        if !isnothing(m)
-            matches = max(matches, length(m.captures))
-        end
-    end
+    # assure that there is at least one matching filename and count the matched captures of this regex, which cannot change by definition
+    idx = findfirst(s -> occursin(filepattern, s), rd)
+    isnothing(idx) && throw(ArgumentError("no files in $dir matched $filepattern"))
+
+    matches = length(match(filepattern, rd[idx]).captures)
     order = NTuple{matches, Int}[]
     for filename in rd
         m = match(filepattern, filename)
@@ -123,14 +122,14 @@ function select_series(filepattern::Regex; dir=pwd())
         # the reverse below is to ensure that the ordering corresponds to the final array order
         push!(order, reverse((parse.(Int, m.captures)...,)))
     end
-    isempty(filenames) && throw(ArgumentError("no files in $dir matched $filepattern"))
+
     # sorting works with tuples as well
     p = sortperm(order)
     filenames = filenames[p]
-    # the reverse below is needed to get the sorting order to match the final array order
-    order_size = get_order_size(reverse.(order))
+    order_size = get_order_size(order)
     if (prod(order_size) == length(filenames))
-        return reshape(filenames, order_size)
+        # the reverse below is needed to get the sorting order to match the final array order
+        return reshape(filenames, reverse(order_size))
     else
         @warn "filenames are not in a grid-like arrangement; returning a vector instead"
         return filenames
