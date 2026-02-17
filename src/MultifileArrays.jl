@@ -8,17 +8,17 @@ MultifileArrays creates lazily-loaded multidimensional arrays from files. Here a
 module MultifileArrays
 
 using SparseArrays   # only for ambiguity resolution
-using Requires
 
 export select_series, load_series, load_chunked
 
-struct MultifileArray{T,N,A<:AbstractArray,NF,F} <: AbstractArray{T,N}
+struct MultifileArray{T,N,A<:AbstractArray{T},NF,F} <: AbstractArray{T,N}  # NF is the number of "file" dimensions, i.e., the number of dimensions in `filenames`
     filenames::Array{String,NF}
     buffer::A
     idx::Base.RefValue{CartesianIndex{NF}}
     loader::F
 
-    function MultifileArray{T,N,A,NF,F}(filenames, buffer, loader) where {T,N,A<:AbstractArray,NF,F}
+    function MultifileArray{T,N,A,NF,F}(filenames, buffer, loader) where {T,N,A<:AbstractArray{T},NF,F}
+        N == ndims(buffer) + NF || throw(ArgumentError("N should be the sum of the number of dimensions in `buffer` and `filenames`"))
         idx = Ref(CartesianIndex(ntuple(i->0, NF)))
         return new{T,N,A,NF,F}(filenames, buffer, idx, loader)
     end
@@ -30,7 +30,7 @@ MultifileArray(filenames, buffer, loader) =
 Base.size(A::MultifileArray) = (size(A.buffer)..., size(A.filenames)...)
 Base.axes(A::MultifileArray) = (axes(A.buffer)..., axes(A.filenames)...)
 
-split_index(::Type{<:MultifileArray{T,N,A}}, I) where {T,N,A<:AbstractArray} =
+split_index(::Type{<:MultifileArray{T,N,A}}, I) where {T,N,A<:AbstractArray{T}} =
     Base.IteratorsMD.split(I, Val(ndims(A)))
 split_index(MFA::AbstractArray, I) = split_index(typeof(MFA), I)
 
@@ -43,7 +43,7 @@ Base.@propagate_inbounds function setbuffer!(MFA::MultifileArray, Ifn)
     return nothing
 end
 
-Base.@propagate_inbounds function Base.getindex(MFA::MultifileArray{T,N,A}, I::Vararg{Int,N}) where {T,N,A<:AbstractArray}
+Base.@propagate_inbounds function Base.getindex(MFA::MultifileArray{T,N,A}, I::Vararg{Int,N}) where {T,N,A<:AbstractArray{T}}
     Ibuf, Ifn = split_index(MFA, CartesianIndex(I))
     Base.@boundscheck checkbounds(MFA.buffer, Ibuf)
     @inbounds setbuffer!(MFA, Ifn)
@@ -305,9 +305,5 @@ In the [TiffImages](https://github.com/tlnagy/TiffImages.jl) package, `mmap=true
     `load_chunked` requires that you manually load the [BlockArrays](https://github.com/JuliaArrays/BlockArrays.jl) package.
 """
 function load_chunked end
-
-function __init__()
-    @require BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e" include("mortar.jl")
-end
 
 end
