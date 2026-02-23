@@ -68,4 +68,52 @@ using Test
         img = nothing
         GC.gc(); GC.gc(); GC.gc()
     end
+
+    @testset "select_series errors" begin
+        mktempdir() do path
+            # No files match → ArgumentError
+            @test_throws ArgumentError select_series(r"nonexistent_(\d+)\.tiff"; dir=path)
+            @test_throws ArgumentError select_series("nonexistent_*.tiff"; dir=path)
+        end
+    end
+
+    @testset "select_series non-grid arrangement" begin
+        mktempdir() do path
+            # 3 files that do not fill a 2×2 grid (missing z=2,t=2)
+            for (z, t) in [(1,1), (1,2), (2,1)]
+                save(joinpath(path, "img_z=$(z)_t=$(t).tiff"), fill(Gray(reinterpret(N0f8, UInt8(z + t))), 3, 3))
+            end
+            fls = @test_warn "not in a grid-like arrangement" select_series(r"img_z=(\d+)_t=(\d+)\.tiff"; dir=path)
+            @test fls isa Vector{String}
+            @test length(fls) == 3
+        end
+    end
+
+    @testset "copyto! with SubArray of MultifileArray" begin
+        mktempdir() do path
+            for i = 1:3
+                save(joinpath(path, "img_$i.tiff"), fill(Gray(reinterpret(N0f8, UInt8(i * 20))), 5, 7))
+            end
+            img = load_series(load, "img_*.tiff"; dir=path)
+
+            # Test _copyto! via explicit copyto! to a plain Array
+            dest = Array{eltype(img)}(undef, 5, 7, 3)
+            copyto!(dest, view(img, :, :, :))
+            for i = 1:3
+                @test all(==(Gray(reinterpret(N0f8, UInt8(i * 20)))), dest[:, :, i])
+            end
+
+            # Test partial slice (exercises the loop over file indices in _copyto!)
+            dest2 = Array{eltype(img)}(undef, 5, 7, 2)
+            copyto!(dest2, view(img, :, :, 1:2))
+            for i = 1:2
+                @test all(==(Gray(reinterpret(N0f8, UInt8(i * 20)))), dest2[:, :, i])
+            end
+
+            # Test with PermutedDimsArray destination (covers the ambiguity-resolution overloads)
+            dest3 = PermutedDimsArray(Array{eltype(img)}(undef, 3, 7, 5), (3, 2, 1))
+            copyto!(dest3, view(img, :, :, :))
+            @test dest3 == dest
+        end
+    end
 end
